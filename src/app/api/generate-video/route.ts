@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase, supabaseAdmin } from '@/lib/supabase'
+import { supabase, getSupabaseAdmin } from '@/lib/supabase'
 import { enhancePrompt } from '@/lib/ai/claude'
 import { enqueueVideoJob } from '@/lib/queue/videoQueue'
 
@@ -16,7 +16,9 @@ export async function POST(req: NextRequest) {
     const { prompt, provider = 'kling', duration = 5, style } = await req.json()
     if (!prompt) return NextResponse.json({ error: 'Prompt is required' }, { status: 400 })
 
-    const { data: profile, error: profileError } = await supabaseAdmin
+    const admin = getSupabaseAdmin()
+
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('credits')
       .eq('id', user.id)
@@ -26,13 +28,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
     }
 
-    if (profile.credits < CREDITS_PER_VIDEO) {
+    if ((profile as any).credits < CREDITS_PER_VIDEO) {
       return NextResponse.json({ error: 'Insufficient credits' }, { status: 402 })
     }
 
-    await supabaseAdmin
+    await admin
       .from('profiles')
-      .update({ credits: profile.credits - CREDITS_PER_VIDEO })
+      .update({ credits: (profile as any).credits - CREDITS_PER_VIDEO })
       .eq('id', user.id)
 
     let enhancedPrompt: string
@@ -42,7 +44,7 @@ export async function POST(req: NextRequest) {
       enhancedPrompt = prompt
     }
 
-    const { data: job, error: jobError } = await supabaseAdmin
+    const { data: job, error: jobError } = await admin
       .from('jobs')
       .insert({
         user_id: user.id,
@@ -58,15 +60,15 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (jobError || !job) {
-      await supabaseAdmin
+      await admin
         .from('profiles')
-        .update({ credits: profile.credits })
+        .update({ credits: (profile as any).credits })
         .eq('id', user.id)
       return NextResponse.json({ error: 'Failed to create job' }, { status: 500 })
     }
 
     await enqueueVideoJob({
-      jobId: job.id,
+      jobId: (job as any).id,
       userId: user.id,
       enhancedPrompt,
       provider,
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({
-      jobId: job.id,
+      jobId: (job as any).id,
       status: 'queued',
       enhancedPrompt,
     })
