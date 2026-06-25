@@ -1,20 +1,6 @@
 import { Queue } from 'bullmq'
 
-const connection = {
-  url: process.env.REDIS_URL!,
-}
-
 export const VIDEO_QUEUE_NAME = 'video-generation'
-
-export const videoQueue = new Queue(VIDEO_QUEUE_NAME, {
-  connection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
-    removeOnComplete: { count: 100 },
-    removeOnFail: { count: 50 },
-  },
-})
 
 export type VideoJobData = {
   jobId: string
@@ -25,9 +11,24 @@ export type VideoJobData = {
   style?: string
 }
 
-export async function enqueueVideoJob(data: VideoJobData) {
-  const job = await videoQueue.add('generate', data, {
-    jobId: data.jobId,
+function getQueue() {
+  const redisUrl = process.env.REDIS_URL
+  if (!redisUrl) throw new Error('REDIS_URL is not set')
+
+  return new Queue(VIDEO_QUEUE_NAME, {
+    connection: { url: redisUrl },
+    defaultJobOptions: {
+      attempts: 3,
+      backoff: { type: 'exponential', delay: 5000 },
+      removeOnComplete: { count: 100 },
+      removeOnFail: { count: 50 },
+    },
   })
+}
+
+export async function enqueueVideoJob(data: VideoJobData) {
+  const queue = getQueue()
+  const job = await queue.add('generate', data, { jobId: data.jobId })
+  await queue.close()
   return job
 }
