@@ -1,0 +1,27 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a0a;
+  color: #e8e6df;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --color-text-primary: #e8e6df;
+  --color-text-secondary: #9c9a92;
+  --color-text-tertiary: #5f5e5a;
+  --color-background-primary: #0a0a0a;
+  --color-background-secondary: #141414;
+  --color-background-tertiary: #1c1c1c;
+  --color-border-tertiary: rgba(255,255,255,0.08);
+  --color-border-secondary: rgba(255,255,255,0.15);
+  --color-text-danger: #f09595;
+}
+
+textarea, select, input { outline: none; }
+textarea:focus, select:focus, input:focus {
+  border-color: rgba(255,255,255,0.3) !important;
+}
+button:disabled { opacity: 0.5; }
